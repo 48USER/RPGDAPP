@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Open Chest</title>
+</head>
+
+<body>
+    <h1>Open Chest</h1>
+    <button id="openChestButton">Open Chest</button>
+    <div id="status"></div>
+
+    <script type="module">
+        import { ethers } from "https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.esm.min.js";
+        const contractAddress = "INSERT CONTRACT ADDRESS";
+        const abiResponse = await fetch('/static/abi/TreasureChest_abi.json');
+        const contractAbi = await abiResponse.json();
+
+        async function connectMetaMask() {
+            if (typeof window.ethereum !== 'undefined') {
+                try {
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    const provider = new ethers.providers.Web3Provider(window.ethereum);
+                    return provider;
+                } catch (err) {
+                    console.error("User rejected MetaMask request", err);
+                    throw err;
+                }
+            } else {
+                alert("MetaMask не установлен!");
+                throw new Error("MetaMask not found");
+            }
+        }
+
+        async function openChest() {
+            const statusDiv = document.getElementById("status");
+            statusDiv.innerText = "Подключаемся к MetaMask...";
+            try {
+                const provider = await connectMetaMask();
+                const signer = provider.getSigner();
+                const contract = new ethers.Contract(contractAddress, contractAbi, signer);
+
+                statusDiv.innerText = "Отправка транзакции...";
+                const tx = await contract.openChest({ value: ethers.utils.parseEther("0.0001") });
+                statusDiv.innerText = "Транзакция отправлена: " + tx.hash;
+                const receipt = await tx.wait();
+                statusDiv.innerText = "Транзакция подтверждена! Receipt: " + JSON.stringify(receipt);
+            } catch (err) {
+                console.error(err);
+                statusDiv.innerText = "Ошибка: " + err.message;
+            }
+        }
+
+        document.getElementById("openChestButton").addEventListener("click", openChest);
+    </script>
+</body>
+
+</html>
